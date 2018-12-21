@@ -14,6 +14,11 @@ type CurrencyRates struct {
 	Rates     map[string]float32 `json:"rates"`
 }
 
+type Rate struct {
+	CurrencyName string  `json:"currencyName"`
+	Rate         float32 `json:"rate"`
+}
+
 type FixerClient struct {
 	apiKey string
 	client http.Client
@@ -37,4 +42,28 @@ func (fc *FixerClient) GetCurrencyRates() (CurrencyRates, error) {
 
 	err = json.NewDecoder(r.Body).Decode(&cr)
 	return cr, err
+}
+
+func (fc *FixerClient) ConvertCurrency(fromCurrency string, toCurrencies []string) ([]Rate, error) {
+	var rates []Rate
+
+	cr, err := fc.GetCurrencyRates()
+
+	if err != nil {
+		return rates, err
+	}
+
+	for _, symbol := range toCurrencies {
+		rate := Rate{CurrencyName: symbol}
+
+		if fromCurrency == cr.Base {
+			rate.Rate = cr.Rates[symbol]
+		} else {
+			rate.Rate = (1 / cr.Rates[fromCurrency]) * cr.Rates[symbol]
+		}
+
+		rates = append(rates, rate)
+	}
+
+	return rates, nil
 }
